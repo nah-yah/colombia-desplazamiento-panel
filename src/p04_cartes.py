@@ -88,7 +88,7 @@ def fig_serie_nationale() -> None:
     ax.set_xlabel("Année du fait")
     style.titrer(
         ax,
-        "Le déplacement forcé recule, sans disparaître",
+        "Le déplacement forcé recule de 2002 à 2020, puis remonte",
         f"Personnes reconnues victimes, par année de survenue du fait, {ANNEE_DEBUT} à {ANNEE_FIN}. "
         "La remontée de 2021 et 2022 suit la recomposition des groupes armés dans les zones "
         "laissées par les FARC.",
@@ -127,10 +127,10 @@ def fig_moran() -> None:
     ax.legend(labelcolor=style.ENCRE_SECONDAIRE, loc="lower left")
     style.titrer(
         ax,
-        "Le déplacement est resté un phénomène de grappes, toute la période",
+        "L'indice de Moran ne faiblit pas sur vingt-trois ans",
         f"Voisinage des {K_VOISINS} plus proches voisins, inférence par permutation. "
-        "L'indice ne faiblit pas après l'accord de paix de 2016 : le volume baisse, "
-        "la structure spatiale tient.",
+        "Le volume de déplacement baisse fortement après l'accord de paix de 2016 ; "
+        "l'indice de Moran reste au même niveau.",
     )
     enregistrer(fig, "fig02_moran_global.png")
 
@@ -144,7 +144,7 @@ def fig_taux_moyen(municipios, panel) -> None:
 
     fig, ax = plt.subplots(figsize=(7.5, 9))
     carte.plot(
-        column="taux_moyen", ax=ax, cmap=style.CMAP_TEMPS, scheme="quantiles", k=6,
+        column="taux_moyen", ax=ax, cmap=style.CMAP_SEQUENTIELLE, scheme="quantiles", k=6,
         edgecolor=style.LIGNE_BASE, linewidth=0.15, legend=True,
         legend_kwds={"title": "Victimes pour 1 000 habitants,\nmoyenne annuelle",
                      "loc": "lower left", "fontsize": 8.5, "title_fontsize": 9},
@@ -179,13 +179,13 @@ def fig_lisa(municipios, lisa) -> None:
         bbox_to_anchor=(0.5, 0.045),
     )
     fig.text(
-        0.03, 0.955, "Les grappes de déplacement forcé ne se déplacent pas",
+        0.03, 0.955, "Les grappes hautes occupent les mêmes régions de 2002 à 2022",
         ha="left", fontsize=14, weight="semibold", color=style.ENCRE_PRINCIPALE,
     )
     fig.text(
         0.03, 0.915,
         "Indicateurs locaux d'association spatiale, seuil de 5 %. Vingt ans séparent la première "
-        "carte de la dernière, et le nombre de municipalités en grappe haute varie à peine.\n"
+        "carte de la dernière, et le nombre de municipalités en grappe haute varie peu.\n"
         "Le détail par municipalité est exporté en tableau dans outputs/tables.",
         fontsize=9.5, color=style.ENCRE_SECONDAIRE, va="top",
     )
@@ -219,9 +219,10 @@ def fig_grappes_persistantes(municipios, lisa) -> None:
     persistantes = int((carte["annees"] == len(ANNEES_LISA)).sum())
     style.habiller_carte(
         ax,
-        "Les grappes ne se déplacent pas beaucoup",
-        f"{persistantes} municipalités appartiennent à une grappe haute sur les quatre années "
-        "examinées. Ce sont elles qui décrivent une géographie structurelle, non conjoncturelle.",
+        f"{persistantes} municipalités en grappe haute sur les quatre années",
+        f"Nombre d'années, parmi {', '.join(str(a) for a in ANNEES_LISA)}, où la municipalité "
+        f"appartient à une grappe haute. Les {persistantes} municipalités présentes les quatre "
+        "années délimitent les zones d'intervention pertinentes.",
         SOURCE,
     )
     enregistrer(fig, "fig05_grappes_persistantes.png")
@@ -242,8 +243,8 @@ def fig_effets() -> None:
             color=style.RAMPE_SEUILS[0], label="Effet indirect, déversé sur les voisines", zorder=3)
 
     # La part déversée est la même pour les trois variables, puisqu'elle ne
-    # dépend que de rho et du voisinage. L'écrire une fois dans le sous-titre
-    # suffit ; la répéter sur chaque barre n'ajouterait que de l'encre.
+    # dépend que de rho et du voisinage. Elle est donc annoncée une seule fois,
+    # dans le titre, plutôt que répétée sur chaque barre.
     part = effets["part_deversee"].iloc[0]
 
     ax.set_yticks(y)

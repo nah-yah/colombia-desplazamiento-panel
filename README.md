@@ -8,19 +8,14 @@
 
 ### Contexte
 
-L'Observatoire territorial pour la stabilisation (OTE) est un centre d'analyse
-fictif qui appuie la programmation territoriale des politiques de
-stabilisation. Son mandat porte sur une question d'allocation.
-
 Les enveloppes de stabilisation sont réparties municipalité par municipalité.
-Cette unité d'allocation n'a de sens que si les phénomènes qu'elle vise
-s'arrêtent aux limites communales. Si le déplacement forcé se diffuse d'une
-municipalité à ses voisines, alors traiter une municipalité isolément revient à
-financer une partie seulement du problème, et à laisser le reste se reformer
-juste à côté.
+Cette unité d'allocation suppose que les phénomènes visés s'arrêtent aux limites
+communales. Si le déplacement forcé se diffuse d'une municipalité à ses
+voisines, financer une municipalité isolément ne traite qu'une partie du
+problème.
 
-Le projet est un cas d'école : le commanditaire et son mandat sont inventés,
-toutes les données sont réelles et publiques.
+Le commanditaire, l'Observatoire territorial pour la stabilisation (OTE), est
+fictif. Les données sont réelles et publiques.
 
 ### Question
 
@@ -44,68 +39,69 @@ stable et citable. Le détail est dans [data/README_data.md](data/README_data.md
 ### Construction du panel
 
 Le panel est complété : une municipalité-année absente du registre signifie zéro
-victime enregistrée, pas une donnée manquante. Laisser ces cases vides ferait
-disparaître des observations et tirerait toute moyenne vers le haut. La grille
-est donc reconstruite et comblée par des zéros. 16,3 % des municipalité-années
-sont à zéro déplacement.
+victime enregistrée et non une donnée manquante. La grille est reconstruite et
+comblée par des zéros ; laisser ces cases vides supprimerait des observations et
+tirerait les moyennes vers le haut. 16,3 % des municipalité-années sont à zéro
+déplacement.
 
-Les codes DIVIPOLA sont normalisés sur cinq caractères avant tout rapprochement,
-le fichier source les stockant en numérique, ce qui a fait perdre le zéro
-initial des départements 05 et 08. Chaque ligne écartée est comptée et le motif
-journalisé dans `outputs/tables/01_journal_nettoyage.csv` : 2 164 lignes sans
-municipalité, 49 codes non conformes, six codes du registre sans géométrie
-correspondante soit 0,03 % des victimes. Une municipalité, Mapiripana en
-Guainía, est exclue faute de population au dénominateur.
+Les codes DIVIPOLA sont normalisés sur cinq caractères avant tout rapprochement.
+Le fichier source les stocke en numérique, ce qui fait perdre le zéro initial
+des départements 05 et 08.
+
+Chaque ligne écartée est comptée et son motif journalisé dans
+`outputs/tables/01_journal_nettoyage.csv` : 2 164 lignes sans municipalité, 49
+codes non conformes, six codes du registre sans géométrie correspondante, soit
+0,03 % des victimes. Une municipalité, Mapiripana en Guainía, est exclue faute
+de population au dénominateur.
 
 Panel final : 1 121 municipalités × 23 années = 25 783 observations, équilibré.
 
-Le dénominateur de population est celui de 2024, unique pour toute la période.
-Dans un modèle à effets fixes municipaux et variable dépendante en logarithme,
-un dénominateur constant dans le temps est entièrement absorbé par l'effet fixe
-et ne modifie aucun coefficient. Il n'affecte que les cartes descriptives, où le
-choix est signalé.
+Le dénominateur de population est celui de 2024 pour toute la période. Dans un
+modèle à effets fixes municipaux et variable dépendante en logarithme, un
+dénominateur constant dans le temps est absorbé par l'effet fixe et ne modifie
+aucun coefficient. Il n'affecte que les cartes descriptives, où le choix est
+signalé.
 
 ### Méthode
 
 **Voisinage.** La matrice principale est celle des cinq plus proches voisins,
-calculée sur les centroïdes projetés en MAGNA-SIRGAS. Ce choix est dicté par la
-géographie : la contiguïté simple laisse San Andrés y Providencia sans voisin, et
-une ligne vide rend la matrice non inversible dans un modèle à décalage spatial.
-La contiguïté de type reine sert de contrôle ; les deux séries d'indices de Moran
-sont corrélées à 0,96.
+calculée sur les centroïdes projetés en MAGNA-SIRGAS. La contiguïté simple
+laisse San Andrés y Providencia sans voisin, et une ligne vide rend la matrice
+non inversible dans un modèle à décalage spatial. La contiguïté de type reine
+sert de contrôle ; les deux séries d'indices de Moran sont corrélées à 0,96.
 
 **Transformation.** Le sinus hyperbolique inverse est retenu plutôt que
-`log(1 + x)` : il se comporte comme un logarithme aux valeurs élevées, reste
-défini en zéro, ce qui compte quand une observation sur six est nulle, et dépend
-moins de l'unité choisie.
+`log(1 + x)`. Il se comporte comme un logarithme aux valeurs élevées et reste
+défini en zéro, ce qui importe ici puisqu'une observation sur six est nulle. Il
+dépend aussi moins de l'unité choisie pour x.
 
 **Décalage.** Les variables explicatives entrent décalées d'un an. Une menace et
 un déplacement enregistrés la même année dans la même municipalité décrivent
 souvent le même épisode ; les régresser l'un sur l'autre mesurerait une identité
 comptable. Le décalage réduit la simultanéité sans la supprimer.
 
-**Trois modèles**, dans cet ordre : effets fixes à deux voies sans terme spatial
-(M1), décalage spatial de la variable dépendante (M2), erreur spatialement
-autocorrélée (M3). Les effets d'année sont retirés en amont, avant que spreg
-n'absorbe les effets municipaux, ce qui revient à une estimation à deux voies.
-Sans cette étape, la chute nationale du déplacement après 2016 serait attribuée
-à la dépendance spatiale : toutes les municipalités baissant ensemble, chacune
-ressemble à ses voisines.
+**Trois modèles** : effets fixes à deux voies sans terme spatial (M1), décalage
+spatial de la variable dépendante (M2), erreur spatialement autocorrélée (M3).
+Les effets d'année sont retirés en amont, avant que spreg n'absorbe les effets
+municipaux, ce qui revient à une estimation à deux voies. Sans cette étape, la
+chute nationale du déplacement après 2016 serait attribuée à la dépendance
+spatiale : toutes les municipalités baissant ensemble, chacune ressemble à ses
+voisines.
 
 **Diagnostic.** L'indice de Moran est calculé sur les résidus de M1 plutôt que
 par les tests du multiplicateur de Lagrange pour panel, dont l'implémentation
 dans `spreg` construit une matrice pleine de 24 662², soit 4,5 Go. Le Moran des
-résidus répond à la même question et se lit directement.
+résidus répond à la même question.
 
 ### Résultats
 
-#### Le déplacement est un phénomène de grappes, et il l'est resté
+#### Une structure en grappes stable sur vingt-trois ans
 
 L'indice de Moran de la variable dépendante reste compris entre 0,60 et 0,73 sur
 les vingt-trois années, significatif dans les vingt-trois. Le volume s'effondre
 entre 2002 (838 000 victimes) et 2020 (108 000), puis remonte à 291 000 en 2022
-avec la recomposition des groupes armés. La structure spatiale, elle, tient.
-L'accord de paix de 2016 n'y laisse aucune trace.
+avec la recomposition des groupes armés. L'indice de Moran, lui, ne baisse pas
+après l'accord de paix de 2016.
 
 Les indicateurs locaux confirment cette stabilité : le nombre de municipalités
 en grappe haute passe de 179 en 2002 à 177 en 2022, avec un maximum de 207 en
@@ -114,8 +110,8 @@ en grappe haute passe de 179 en 2002 à 177 en 2022, avec un maximum de 207 en
 54 municipalités appartiennent à une grappe haute sur les quatre années
 examinées : Caquetá (13), Antioquia, Chocó, Meta, Norte de Santander et
 Putumayo (6 chacun), Bolívar et Cauca (3), Córdoba et Guaviare (2), Nariño (1).
-C'est la géographie structurelle du déplacement colombien, et elle recoupe les
-zones d'économie illicite et de faible présence de l'État.
+Ces départements recoupent les zones d'économie illicite et de faible présence
+de l'État.
 
 #### Les violences locales n'épuisent pas la structure spatiale
 
@@ -130,13 +126,13 @@ groupés par municipalité.
 
 Le Moran des résidus de M1 vaut 0,294 en médiane et reste significatif dans les
 vingt-deux années estimées. Une fois retirés les effets fixes et les violences
-locales décalées, ce qui reste est encore fortement groupé dans l'espace, signe
-que le modèle non spatial est mal spécifié.
+locales décalées, ce qui reste est encore fortement groupé dans l'espace : le
+modèle non spatial est mal spécifié.
 
 L'ajout du terme spatial fait chuter les coefficients de près de 40 %. Une part
-substantielle de ce que M1 attribuait aux violences locales était en réalité de
-la dépendance entre voisines. Le décalage spatial l'emporte sur l'erreur
-spatiale au critère d'information.
+de ce que M1 attribuait aux violences locales relève donc de la dépendance entre
+voisines. Le décalage spatial l'emporte sur l'erreur spatiale au critère
+d'information.
 
 #### 52 % de l'effet se produit hors de la municipalité touchée
 
@@ -147,28 +143,25 @@ spatiale au critère d'information.
 | Combats et engins explosifs, décalés | 0,060 | 0,065 | 0,125 |
 
 Un choc de violence dans une municipalité produit un peu plus de la moitié de
-son effet total ailleurs que là où il a lieu. C'est la réponse à la question
-posée en tête.
+son effet total ailleurs que là où il a lieu.
 
-La part déversée est identique pour les trois variables, et ce n'est pas une
-erreur de calcul : dans un modèle à décalage spatial, le rapport de l'effet
-indirect à l'effet total ne dépend que de ρ et du voisinage, jamais du
-coefficient de la variable. Le paramètre spatial décrit la géographie de la
-diffusion, commune à tous les chocs, et les coefficients en décrivent
-l'intensité.
+La part déversée est identique pour les trois variables, par construction : dans
+un modèle à décalage spatial, le rapport de l'effet indirect à l'effet total ne
+dépend que de ρ et du voisinage, jamais du coefficient de la variable. Le
+paramètre spatial décrit la géographie de la diffusion, les coefficients en
+décrivent l'intensité.
 
 Pour l'allocation des ressources, financer une municipalité isolément revient à
 ne traiter que la moitié de l'effet d'un choc. Les 54 municipalités en grappe
 persistante, et les grappes auxquelles elles appartiennent, sont les unités
-d'intervention pertinentes : elles décrivent une géographie du déplacement qui
-n'a pas bougé en vingt ans.
+d'intervention pertinentes.
 
 ### Ce que cette analyse ne dit pas
 
 Aucun effet causal n'est identifié. Les faits de violence et le déplacement sont
 enregistrés par la même administration, à partir des mêmes déclarations, et le
 décalage d'un an ne les rend pas exogènes. Le modèle décrit une structure de
-dépendance, il ne dit pas par quel mécanisme le déplacement se propage.
+dépendance ; il ne dit pas par quel mécanisme le déplacement se propage.
 
 Le registre est administratif et non épidémiologique. Il compte les personnes
 reconnues victimes, ce qui dépend de leur déclaration et de son traitement. Les
@@ -222,14 +215,13 @@ notebooks/analyse.ipynb
 
 ### Context
 
-The Territorial Observatory for Stabilisation (OTE) is a fictional policy
-analysis centre. Stabilisation budgets in Colombia are allocated municipality by
-municipality. That unit only makes sense if the phenomena it targets stop at
-municipal boundaries. If forced displacement diffuses to neighbours, funding one
-municipality in isolation treats only part of the problem and lets the rest
-re-form next door.
+Stabilisation budgets in Colombia are allocated municipality by municipality.
+That unit assumes the phenomena it targets stop at municipal boundaries. If
+forced displacement diffuses to neighbours, funding one municipality in
+isolation treats only part of the problem.
 
-The commissioning body is invented; every dataset is real and public.
+The commissioning body, the Territorial Observatory for Stabilisation (OTE), is
+fictional. Every dataset is real and public.
 
 ### Question
 
@@ -240,8 +232,8 @@ local violence explains, and what share of a local shock does not stay local?
 
 A balanced panel of 1,121 municipalities × 23 years (25,783 observations) is
 built from the Colombian victims' registry. Absent municipality-years mean zero
-recorded victims, not missing data, so the grid is completed with zeros; 16.3 %
-of cells are zero. Every dropped row is logged with its reason.
+recorded victims rather than missing data, so the grid is completed with zeros;
+16.3 % of cells are zero. Every dropped row is logged with its reason.
 
 The outcome is the inverse hyperbolic sine of the displacement rate, which
 behaves like a log at high values while remaining defined at zero. Regressors
@@ -260,10 +252,10 @@ as spatial dependence.
 Displacement is a cluster phenomenon and has stayed one. Global Moran's I on the
 outcome stays between 0.60 and 0.73 across all 23 years, significant in every
 one. Volume collapses from 838,000 victims in 2002 to 108,000 in 2020 then
-rebounds to 291,000 in 2022, while the spatial structure holds. The 2016 peace
-accord leaves no trace in it. 54 municipalities sit in a high-high cluster in all
-four mapped years, concentrated in Caquetá, Antioquia, Chocó, Meta, Norte de
-Santander and Putumayo.
+rebounds to 291,000 in 2022, while Moran's I does not decline after the 2016
+peace accord. 54 municipalities sit in a high-high cluster in all four mapped
+years, concentrated in Caquetá, Antioquia, Chocó, Meta, Norte de Santander and
+Putumayo.
 
 Local violence does not exhaust the spatial structure. Moran's I on M1 residuals
 is 0.294 at the median and significant in all 22 estimated years, so the

@@ -6,21 +6,20 @@ les rattache à la municipalité où le fait s'est produit. Le panel construit i
 compte donc, pour chaque municipalité et chaque année, le nombre de personnes
 reconnues victimes de chaque type de fait.
 
-Trois précautions structurent le script :
+Trois points de construction :
 
 1. Le panel est rendu complet. Une municipalité-année absente du registre
-   signifie zéro victime enregistrée, pas une donnée manquante ; laisser ces
-   cases vides ferait disparaître des observations et biaiserait toute moyenne
-   vers le haut. La grille complète est donc reconstruite et comblée par des
-   zéros.
+   signifie zéro victime enregistrée et non une donnée manquante ; laisser ces
+   cases vides supprimerait des observations et tirerait les moyennes vers le
+   haut. La grille complète est reconstruite et comblée par des zéros.
 2. Les codes DIVIPOLA sont normalisés sur cinq caractères avant tout
    rapprochement. Le fichier source les stocke en numérique, ce qui a fait
    perdre le zéro initial des départements 05 et 08.
-3. Le dénominateur de population est celui de 2024, unique pour toute la
-   période. Ce n'est pas un oubli : dans un modèle à effets fixes municipaux et
-   variable dépendante en logarithme, un dénominateur constant dans le temps est
-   entièrement absorbé par l'effet fixe et ne modifie aucun coefficient. Il
-   n'affecte que les cartes descriptives, où le choix est signalé.
+3. Le dénominateur de population est celui de 2024 pour toute la période. Dans
+   un modèle à effets fixes municipaux et variable dépendante en logarithme, un
+   dénominateur constant dans le temps est absorbé par l'effet fixe et ne
+   modifie aucun coefficient. Il n'affecte que les cartes descriptives, où le
+   choix est signalé.
 
 Sorties :
   data/processed/panel.parquet
@@ -80,9 +79,8 @@ def charger_registre() -> pd.DataFrame:
     brut["annee"] = pd.to_numeric(brut["Ano"], errors="coerce")
     brut["divipola"] = normaliser_divipola(brut["DANE_OCURRENCIA"])
 
-    # Traçabilité du nettoyage : chaque ligne écartée est comptée et le motif
-    # est écrit sur disque, pour qu'un relecteur puisse vérifier qu'aucune purge
-    # silencieuse n'a eu lieu.
+    # Chaque ligne écartée est comptée et son motif écrit sur disque, pour que
+    # le nettoyage soit vérifiable ligne à ligne.
     motifs = []
 
     hors_annee = ~brut["annee"].between(ANNEE_DEBUT, ANNEE_FIN)
@@ -138,9 +136,9 @@ def pivoter(registre: pd.DataFrame) -> pd.DataFrame:
 
     table = pd.concat(morceaux, axis=1).reset_index()
 
-    # Déplacement massif : sous-ensemble du déplacement forcé, conservé à part
-    # parce qu'un déplacement massif signale une expulsion collective, alors
-    # qu'un déplacement individuel peut résulter d'une menace ciblée.
+    # Déplacement massif : sous-ensemble du déplacement forcé, conservé à part.
+    # Un déplacement massif signale une expulsion collective, un déplacement
+    # individuel peut résulter d'une menace ciblée.
     massif = registre[
         (registre["HECHO"] == HECHO_DEPLACEMENT)
         & (registre["TIPO_DESPLAZAMIENTO"].str.upper() == "MASIVO")
@@ -205,10 +203,9 @@ def charger_municipios() -> gpd.GeoDataFrame:
     couche = couche.merge(population, on="divipola", how="left")
 
     # Une population nulle ou absente rend indéfini tout taux pour mille et tout
-    # logarithme. Ces unités sont retirées de l'échantillon plutôt que corrigées
-    # par une valeur plancher arbitraire, et la liste est journalisée : il s'agit
-    # de corregimientos départementaux d'Amazonie que le fichier de population
-    # ne couvre pas.
+    # logarithme. Ces unités sont retirées de l'échantillon, sans correction par
+    # une valeur plancher, et la liste est journalisée. Il s'agit de
+    # corregimientos départementaux d'Amazonie absents du fichier de population.
     sans_population = couche["population"].isna() | (couche["population"] <= 0)
     if sans_population.any():
         exclues = couche.loc[sans_population, ["divipola", "municipio", "departamento"]]
@@ -238,9 +235,9 @@ def completer_panel(table: pd.DataFrame, municipios: gpd.GeoDataFrame) -> pd.Dat
     panel = grille.merge(table, on=["divipola", "annee"], how="left")
     panel[colonnes_faits] = panel[colonnes_faits].fillna(0.0)
 
-    # Les codes présents dans le registre mais absents des limites sont signalés,
-    # jamais absorbés en silence : ils correspondent surtout à des municipalités
-    # créées ou supprimées après le millésime cartographique.
+    # Les codes présents dans le registre mais absents des limites sont comptés
+    # et écrits sur disque. Ils correspondent surtout à des municipalités créées
+    # ou supprimées après le millésime cartographique.
     inconnus = set(table["divipola"]) - set(municipios["divipola"])
     if inconnus:
         perdus = table[table["divipola"].isin(inconnus)]["deplacement"].sum()
@@ -264,9 +261,9 @@ def ajouter_variables(panel: pd.DataFrame) -> pd.DataFrame:
     for col in ["deplacement", "violence_letale", "intimidation", "combat", "deplacement_massif"]:
         panel[f"taux_{col}"] = panel[col] / pop * 1000
 
-    # Le sinus hyperbolique inverse est retenu plutôt que log(1 + x) : il se
-    # comporte comme un logarithme aux valeurs élevées, reste défini en zéro, et
-    # ne dépend pas de l'unité choisie pour x autant que log(1 + x).
+    # Le sinus hyperbolique inverse est retenu plutôt que log(1 + x). Il se
+    # comporte comme un logarithme aux valeurs élevées et reste défini en zéro.
+    # Il dépend aussi moins de l'unité choisie pour x.
     for col in ["deplacement", "violence_letale", "intimidation", "combat"]:
         panel[f"as_{col}"] = np.arcsinh(panel[f"taux_{col}"])
 

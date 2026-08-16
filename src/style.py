@@ -1,17 +1,14 @@
 """
 Jetons graphiques et réglages matplotlib communs à toutes les sorties.
 
-Les couleurs ne sont pas choisies à l'œil. Chaque couleur fait exactement un
-travail : dire une identité (catégoriel), dire une quantité (séquentiel), dire un
-état (statut). Les valeurs ci-dessous proviennent d'une palette validée : la
-rampe séquentielle bleue est monotone en clarté, et le triplet catégoriel
-bleu / rouge / jaune passe le contrôle de séparation en vision déficiente sur
-toutes les paires (ΔE 15,3 en deutéranopie, plancher exigé 8).
+Deux familles de couleurs sont définies : une rampe séquentielle bleue, monotone
+en clarté, pour les quantités, et un triplet catégoriel bleu / rouge / jaune pour
+les classes LISA. Le triplet passe le contrôle de séparation en vision déficiente
+sur toutes les paires (ΔE 15,3 en deutéranopie, plancher exigé 8).
 
-Le jaune tombe sous le rapport de contraste 3:1 sur fond clair. La compensation
-prévue est appliquée partout où il sert : légende explicitement libellée et
-export du même contenu en tableau CSV, de sorte que l'information ne repose
-jamais sur la seule couleur.
+Le jaune tombe sous le rapport de contraste 3:1 sur fond clair. Là où il sert, la
+légende est explicitement libellée et le même contenu exporté en tableau CSV, de
+sorte que l'information ne repose pas sur la seule couleur.
 """
 
 from __future__ import annotations
@@ -24,61 +21,54 @@ from matplotlib.colors import LinearSegmentedColormap
 # --------------------------------------------------------------------------
 
 SURFACE = "#fcfcfb"
-PLAN_PAGE = "#f9f9f7"
 ENCRE_PRINCIPALE = "#0b0b0b"
 ENCRE_SECONDAIRE = "#52514e"
 ENCRE_ATTENUEE = "#898781"
 GRILLE = "#e1e0d9"
 LIGNE_BASE = "#c3c2b7"
 
-# Fond des couches de contexte (mer, communes sans donnée).
+# Fond des municipalités sans donnée ou hors classe significative.
 FOND_TERRE = "#f0efec"
-FOND_MER = "#eef2f6"
 
 # --------------------------------------------------------------------------
 # Rampe séquentielle : une seule teinte, du clair au foncé
 # --------------------------------------------------------------------------
 
-# Le temps de trajet est une grandeur, pas une identité ni une polarité : il
-# prend donc une rampe à teinte unique. Un dégradé arc-en-ciel donnerait
-# l'illusion de seuils là où la variation est continue.
+# Le taux de déplacement est une grandeur continue : rampe à teinte unique. Un
+# dégradé arc-en-ciel donnerait l'illusion de seuils là où la variation est
+# continue.
 RAMPE_BLEUE = [
     "#cde2fb", "#b7d3f6", "#9ec5f4", "#86b6ef", "#6da7ec", "#5598e7",
     "#3987e5", "#2a78d6", "#256abf", "#1c5cab", "#184f95", "#104281", "#0d366b",
 ]
-CMAP_TEMPS = LinearSegmentedColormap.from_list("temps_trajet", RAMPE_BLEUE)
+CMAP_SEQUENTIELLE = LinearSegmentedColormap.from_list("taux_deplacement", RAMPE_BLEUE)
 
-# Rampe ordinale à trois crans pour les seuils 30 / 60 / 120 minutes. Le cran le
-# plus clair reste au-dessus de 2:1 sur la surface, condition pour qu'une barre
-# claire ne se confonde pas avec le fond.
+# Rampe ordinale à trois crans, utilisée pour les barres d'effets directs et
+# indirects. Le cran le plus clair reste au-dessus de 2:1 sur la surface, pour
+# qu'une barre claire ne se confonde pas avec le fond.
 RAMPE_SEUILS = ["#86b6ef", "#2a78d6", "#104281"]
 
 # --------------------------------------------------------------------------
-# Catégoriel et statut
+# Séries de courbes
 # --------------------------------------------------------------------------
 
 SERIE_1 = "#2a78d6"
 SERIE_2 = "#eb6834"
 
-STATUT_CRITIQUE = "#d03b3b"
-STATUT_ALERTE = "#fab219"
-STATUT_BON = "#0ca30c"
-
 # --------------------------------------------------------------------------
 # Classes LISA
 # --------------------------------------------------------------------------
 
-# Quatre modalités sont ramenées à trois classes colorées plus une neutre. Le
-# triplet bleu / rouge / jaune a été validé sur toutes les paires, condition
-# nécessaire pour une carte choroplèthe où n'importe quelles deux couleurs
-# peuvent se retrouver côte à côte : pire paire ΔE 15,3 en deutéranopie, très
-# au-dessus du plancher de 8.
+# Quatre modalités sont ramenées à trois classes colorées plus une neutre. Sur
+# une carte choroplèthe, n'importe quelles deux couleurs peuvent se retrouver
+# côte à côte : le triplet est donc validé sur toutes les paires, pas seulement
+# sur les paires attendues.
 #
 # Les valeurs atypiques haut-bas et bas-haut sont fusionnées en une seule
 # classe. Les séparer imposerait une quatrième couleur, et aucun quatuor de la
-# palette ne passe le contrôle toutes paires ; elles sont d'ailleurs peu
-# nombreuses et portent le même message, celui d'une municipalité en rupture
-# avec son voisinage.
+# palette ne passe le contrôle toutes paires. Elles sont peu nombreuses et
+# portent le même message, celui d'une municipalité en rupture avec son
+# voisinage.
 COULEURS_LISA = {
     "Haut-Haut": "#e34948",
     "Bas-Bas": "#2a78d6",
@@ -125,7 +115,7 @@ def titrer(ax, titre: str, sous_titre: str = "", source: str = "") -> None:
     """
     Pose titre, sous-titre et source au-dessus d'un graphique.
 
-    Le placement se fait en coordonnées d'axes plutôt que par `set_title` et
+    Le placement se fait en coordonnées d'axes, et non par `set_title` et
     `figure.text` : mélanger les deux systèmes fait se chevaucher les deux
     textes dès que la figure change de taille.
     """

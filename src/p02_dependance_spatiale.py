@@ -1,10 +1,10 @@
 """
 Étape 2 : matrices de voisinage et dépendance spatiale.
 
-La question posée est simple : le déplacement forcé se concentre-t-il en grappes
-qui traversent les frontières municipales, ou chaque municipalité suit-elle sa
-propre trajectoire ? C'est la réponse à cette question qui décide si l'unité
-d'allocation d'un programme de stabilisation doit rester la municipalité.
+L'étape teste si le déplacement forcé se concentre en grappes qui traversent les
+frontières municipales, ou si chaque municipalité suit sa propre trajectoire. La
+réponse détermine si l'unité d'allocation d'un programme de stabilisation peut
+rester la municipalité.
 
 Le script produit :
   - deux matrices de voisinage, k plus proches voisins et contiguïté de type reine
@@ -42,8 +42,8 @@ from utils import etape, exiger, log  # noqa: E402
 
 VARIABLE = "as_deplacement"
 
-# Graine fixée : l'inférence de Moran repose sur des permutations aléatoires, et
-# un résultat non reproductible n'est pas un résultat.
+# L'inférence de Moran repose sur des permutations aléatoires. Graine fixée pour
+# que les p-valeurs soient reproductibles d'une exécution à l'autre.
 GRAINE = 20260814
 
 
@@ -66,10 +66,9 @@ def construire_voisinages(municipios: gpd.GeoDataFrame) -> dict:
     )
     if iles:
         log(
-            "  ces entités isolées sont la raison pour laquelle la matrice "
-            "principale retenue est celle des k plus proches voisins : "
-            "une ligne vide rend la matrice non inversible dans un modèle à "
-            "décalage spatial."
+            "  une ligne vide rend la matrice non inversible dans un modèle à "
+            "décalage spatial : la matrice principale est celle des k plus "
+            "proches voisins."
         )
     w_reine.transform = "r"
 
@@ -108,9 +107,10 @@ def lisa_annee(panel: pd.DataFrame, w, ordre: list[str], annee: int) -> pd.DataF
     )
 
     # Les quadrants de esda : 1 haut-haut, 2 bas-haut, 3 bas-bas, 4 haut-bas.
-    # Bas-haut et haut-bas sont regroupés sous « atypique » : ce sont des
-    # municipalités en rupture avec leur voisinage, et les distinguer imposerait
-    # une quatrième couleur qui ne passe pas le contrôle de lisibilité.
+    # Bas-haut et haut-bas sont regroupés sous « atypique ». Les deux désignent
+    # une municipalité en rupture avec son voisinage, et les distinguer
+    # imposerait une quatrième couleur qui ne passe pas le contrôle de
+    # lisibilité (voir style.py).
     etiquettes = {1: "Haut-Haut", 2: "Atypique", 3: "Bas-Bas", 4: "Atypique"}
     classe = pd.Series(local.q, index=ordre).map(etiquettes)
     classe[local.p_sim >= SEUIL_SIGNIFICATIVITE] = "Non significatif"
@@ -173,9 +173,9 @@ def main() -> None:
         recap.to_csv(TABLEAUX / "02_lisa_repartition.csv")
         log("\nNombre de municipalités par classe :\n" + recap.to_string())
 
-        # Le même contenu que la carte, sous forme de tableau : c'est la
-        # contrepartie exigée par la palette, dont une teinte passe sous le
-        # rapport de contraste de 3:1 sur fond clair.
+        # Export du même contenu que la carte, sous forme de tableau. Une teinte
+        # de la palette LISA passe sous le rapport de contraste 3:1 sur fond
+        # clair : l'information ne doit pas reposer sur la seule couleur.
         noms = municipios[["divipola", "municipio", "departamento"]]
         lisa.merge(noms, on="divipola").to_csv(
             TABLEAUX / "02_lisa_detail_par_municipalite.csv", index=False

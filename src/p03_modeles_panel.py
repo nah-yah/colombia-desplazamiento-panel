@@ -1,38 +1,34 @@
 """
 Étape 3 : modèles de panel spatiaux.
 
-Trois spécifications sont estimées sur le même échantillon, dans cet ordre :
+Trois spécifications sont estimées sur le même échantillon :
 
   M1  effets fixes à deux voies, sans terme spatial
   M2  modèle à décalage spatial de la variable dépendante (SAR), effets fixes
   M3  modèle à erreur spatialement autocorrélée (SEM), effets fixes
 
-L'ordre n'est pas décoratif. M1 sert de référence, et ses résidus servent de
-diagnostic : si le déplacement forcé n'était structuré spatialement que par les
-variables explicatives, les résidus de M1 seraient dispersés au hasard sur le
-territoire. S'ils restent groupés, le modèle non spatial est mal spécifié, et il
-faut lui ajouter un terme spatial. Estimer directement un SAR sans avoir regardé
-ces résidus reviendrait à supposer la réponse.
+M1 sert de référence et ses résidus de diagnostic. Si le déplacement forcé
+n'était structuré spatialement que par les variables explicatives, les résidus
+de M1 seraient dispersés au hasard sur le territoire ; s'ils restent groupés, le
+modèle non spatial est mal spécifié et appelle un terme spatial.
 
-Le diagnostic retenu est l'indice de Moran calculé sur les résidus de M1, année
-par année, plutôt que les tests du multiplicateur de Lagrange pour données de
-panel. Ce n'est pas un raccourci mais une contrainte : l'implémentation de ces
-tests dans spreg construit une matrice pleine de dimension (n x t) au carré,
-soit 4,5 Go pour ce panel de 24 662 observations. Le Moran des résidus répond à
-la même question, se lit directement, et coûte quelques secondes.
+Le diagnostic est l'indice de Moran calculé sur les résidus de M1, année par
+année, et non les tests du multiplicateur de Lagrange pour données de panel :
+leur implémentation dans spreg construit une matrice pleine de dimension
+(n x t) au carré, soit 4,5 Go pour ce panel de 24 662 observations. Le Moran des
+résidus répond à la même question en quelques secondes de calcul.
 
-Les effets fixes municipaux absorbent tout ce qui, dans une municipalité, ne
-bouge pas sur la période : relief, distance aux marchés, présence historique
-d'un groupe armé, qualité de l'enregistrement administratif local. Les effets
-d'année absorbent les chocs nationaux, dont l'accord de paix de 2016 et les
-changements de doctrine d'enregistrement du registre.
+Les effets fixes municipaux absorbent ce qui, dans une municipalité, ne bouge
+pas sur la période : relief, distance aux marchés, présence historique d'un
+groupe armé, qualité de l'enregistrement administratif local. Les effets d'année
+absorbent les chocs nationaux, dont l'accord de paix de 2016 et les changements
+de doctrine d'enregistrement du registre.
 
-CE QUE CES MODÈLES NE FONT PAS. Ils ne mesurent pas d'effet causal. Les faits de
-violence et le déplacement sont enregistrés par la même administration, à partir
-des mêmes déclarations, et le décalage d'un an ne suffit pas à les rendre
-exogènes. Ce qui est estimé est une structure de dépendance : dans quelle mesure
-le déplacement d'une municipalité s'explique par ce qui se passe chez ses
-voisines, une fois retirés ce qui lui est propre et ce qui est commun à toutes.
+Ces modèles ne mesurent pas d'effet causal ; ils estiment une structure de
+dépendance, c'est-à-dire dans quelle mesure le déplacement d'une municipalité
+s'explique par ce qui se passe chez ses voisines, une fois retirés ce qui lui
+est propre et ce qui est commun à toutes. Les limites de l'exercice sont
+détaillées dans le README.
 
 Sorties : outputs/tables/03_*.csv
 """
@@ -81,8 +77,8 @@ def preparer(panel: pd.DataFrame, ordre: list[str]):
 
     spreg attend un empilement par période : les n municipalités de la première
     année, puis les n de la deuxième, et ainsi de suite. L'ordre des unités doit
-    être exactement celui de la matrice de voisinage, sans quoi les poids sont
-    appliqués aux mauvais voisins et le modèle tourne sans rien signaler.
+    être exactement celui de la matrice de voisinage, sans quoi les poids
+    portent sur les mauvais voisins et l'estimation aboutit sans lever d'erreur.
     """
     # Le décalage d'un an consomme la première année de la fenêtre.
     annees = sorted(a for a in panel["annee"].unique() if a > ANNEE_DEBUT)
@@ -177,17 +173,11 @@ def decomposer_effets(rho: float, betas: np.ndarray, w) -> pd.DataFrame:
     et se lit sur la diagonale de l'inverse de (I - rho W) ; la différence est ce
     qui se déverse sur les voisines.
 
-    C'est la seule quantité qui répond à la question posée par le commanditaire :
-    combien d'un choc local ne reste pas local.
-
-    La part déversée ressort identique pour toutes les variables, et ce n'est pas
-    une erreur de calcul : dans un modèle à décalage spatial, le rapport de
-    l'effet indirect à l'effet total ne dépend que de rho et de la matrice de
-    voisinage, jamais du coefficient de la variable. Le paramètre spatial décrit
-    la géographie de la diffusion, commune à tous les chocs ; les coefficients
-    n'en décrivent que l'intensité. Un modèle de Durbin spatial, qui ajoute les
-    variables explicatives décalées, permettrait des parts distinctes par
-    variable ; il n'est pas estimé ici.
+    La part déversée ressort identique pour toutes les variables, par
+    construction : le rapport de l'effet indirect à l'effet total ne dépend que
+    de rho et de la matrice de voisinage, jamais du coefficient de la variable.
+    Un modèle de Durbin spatial, qui ajoute les variables explicatives décalées,
+    permettrait des parts distinctes par variable ; il n'est pas estimé ici.
     """
     n = w.n
     W = w.full()[0]
@@ -255,9 +245,8 @@ def main() -> None:
             f"significatif dans {int(diagnostic['significatif'].sum())} années sur {len(diagnostic)}"
         )
         log(
-            "  Une dépendance résiduelle marquée signifie que les violences locales "
-            "n'épuisent pas la structure spatiale du déplacement : il reste, entre "
-            "municipalités voisines, quelque chose que le modèle non spatial ne capte pas."
+            "  Une dépendance résiduelle significative indique que les violences "
+            "locales n'épuisent pas la structure spatiale du déplacement."
         )
 
     with etape("M2, décalage spatial avec effets fixes"):
@@ -272,8 +261,8 @@ def main() -> None:
         erreurs_m2 = np.asarray(m2.std_err).ravel()[: len(EXPLICATIVES)]
         log(f"  rho estimé : {rho:.4f}")
         log(
-            "  Un rho positif signifie que le déplacement d'une municipalité est "
-            "d'autant plus élevé que celui de ses voisines l'est."
+            "  Un rho positif : le déplacement d'une municipalité est d'autant "
+            "plus élevé que celui de ses voisines l'est."
         )
 
         table_m2 = pd.DataFrame({
